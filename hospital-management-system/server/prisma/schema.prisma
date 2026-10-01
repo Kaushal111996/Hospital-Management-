@@ -1,0 +1,147 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./hms.db"
+}
+
+model User {
+  id       Int    @id @default(autoincrement())
+  name     String
+  email    String @unique
+  password String
+  role     String // ADMIN | DOCTOR | RECEPTIONIST | LAB | BILLING
+}
+
+model Department {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  doctors     Doctor[]
+}
+
+model Doctor {
+  id             Int            @id @default(autoincrement())
+  name           String
+  specialization String
+  phone          String?
+  availability   String?
+  active         Boolean        @default(true)
+  departmentId   Int
+  department     Department     @relation(fields: [departmentId], references: [id])
+  appointments   Appointment[]
+  consultations  Consultation[]
+  prescriptions  Prescription[]
+}
+
+model Patient {
+  id             Int            @id @default(autoincrement())
+  name           String
+  age            Int
+  gender         String
+  phone          String?
+  address        String?
+  bloodGroup     String?
+  medicalHistory String?
+  active         Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  appointments   Appointment[]
+  consultations  Consultation[]
+  prescriptions  Prescription[]
+  labOrders      LabOrder[]
+  admissions     Admission[]
+  bills          Bill[]
+}
+
+model Appointment {
+  id        Int      @id @default(autoincrement())
+  patientId Int
+  doctorId  Int
+  date      DateTime
+  status    String   @default("SCHEDULED") // SCHEDULED | COMPLETED | CANCELLED
+  reason    String?
+  patient   Patient  @relation(fields: [patientId], references: [id])
+  doctor    Doctor   @relation(fields: [doctorId], references: [id])
+}
+
+model Consultation {
+  id        Int      @id @default(autoincrement())
+  patientId Int
+  doctorId  Int
+  symptoms  String
+  diagnosis String?
+  notes     String?
+  treatment String?
+  createdAt DateTime @default(now())
+  patient   Patient  @relation(fields: [patientId], references: [id])
+  doctor    Doctor   @relation(fields: [doctorId], references: [id])
+}
+
+model Prescription {
+  id        Int      @id @default(autoincrement())
+  patientId Int
+  doctorId  Int
+  medicines String // one per line: Medicine | Dosage | Duration
+  createdAt DateTime @default(now())
+  patient   Patient  @relation(fields: [patientId], references: [id])
+  doctor    Doctor   @relation(fields: [doctorId], references: [id])
+}
+
+model LabTest {
+  id     Int        @id @default(autoincrement())
+  name   String     @unique
+  price  Float
+  orders LabOrder[]
+}
+
+model LabOrder {
+  id        Int      @id @default(autoincrement())
+  patientId Int
+  labTestId Int
+  status    String   @default("PENDING") // PENDING | COMPLETED
+  result    String?
+  createdAt DateTime @default(now())
+  patient   Patient  @relation(fields: [patientId], references: [id])
+  labTest   LabTest  @relation(fields: [labTestId], references: [id])
+}
+
+model Room {
+  id     Int    @id @default(autoincrement())
+  number String @unique
+  type   String
+  beds   Bed[]
+}
+
+model Bed {
+  id         Int         @id @default(autoincrement())
+  label      String
+  occupied   Boolean     @default(false)
+  roomId     Int
+  room       Room        @relation(fields: [roomId], references: [id])
+  admissions Admission[]
+}
+
+model Admission {
+  id           Int       @id @default(autoincrement())
+  patientId    Int
+  bedId        Int
+  admittedAt   DateTime  @default(now())
+  dischargedAt DateTime?
+  patient      Patient   @relation(fields: [patientId], references: [id])
+  bed          Bed       @relation(fields: [bedId], references: [id])
+}
+
+model Bill {
+  id              Int      @id @default(autoincrement())
+  patientId       Int
+  consultationFee Float    @default(0)
+  labCharges      Float    @default(0)
+  medicineCharges Float    @default(0)
+  otherCharges    Float    @default(0)
+  total           Float    @default(0)
+  status          String   @default("PENDING") // PENDING | PAID
+  createdAt       DateTime @default(now())
+  patient         Patient  @relation(fields: [patientId], references: [id])
+}
